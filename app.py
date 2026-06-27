@@ -312,7 +312,7 @@ HTML_TEMPLATE = """
     <header class="header">
         <div class="header-grid">
             <div class="header-left">
-                <span class="emblem" aria-hidden="true">🏛️</span>
+              <img src="logo2.png" alt="Government Logo" class="header-logo" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div class=\'emblem-fallback\'></div>';">
                 <div class="header-titles">
                     <h1 class="main-title">Deputy Commissioner Office</h1>
                     <h2 class="sub-title">Revenue Department, Bidar</h2>
