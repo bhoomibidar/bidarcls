@@ -206,7 +206,7 @@ def generate_docx(data):
     return file_stream
 
 # ===================================================================
-#  COMPLETE HTML TEMPLATE WITH FIXED QUERY GENERATION
+#  COMPLETE HTML TEMPLATE WITH ALL VILLAGES EMBEDDED
 # ===================================================================
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -217,537 +217,90 @@ HTML_TEMPLATE = """
     <title>Bidar District · Revenue Command Center</title>
     <style>
         /* ----- Reset & Base ----- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-            background: #f0f4f8;
-            color: #1e293b;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 1440px;
-            margin: 0 auto;
-        }
-
-        /* ----- Header (Navy & Gold) ----- */
-        .header {
-            background: linear-gradient(135deg, #0b1a33 0%, #1a3a5c 60%, #2a5a7a 100%);
-            border-radius: 24px;
-            padding: 24px 32px;
-            margin-bottom: 30px;
-            box-shadow: 0 12px 40px rgba(10, 30, 60, 0.25);
-            border-bottom: 5px solid #d4a843;
-            position: relative;
-            overflow: hidden;
-        }
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(212, 168, 67, 0.08) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-        .header-grid {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 16px;
-            position: relative;
-            z-index: 1;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-        }
-        .emblem {
-            width: 70px;
-            height: 70px;
-            background: #f8f4ea;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 34px;
-            font-weight: 700;
-            color: #0b1a33;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            border: 3px solid #d4a843;
-        }
-        .header-titles .gov-tag {
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 2.5px;
-            color: #d4a843;
-            text-transform: uppercase;
-        }
-        .header-titles .main-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            line-height: 1.2;
-        }
-        .header-titles .sub-title {
-            font-size: 18px;
-            font-weight: 400;
-            color: #cbd5e1;
-            letter-spacing: 0.3px;
-        }
-        .header-right {
-            text-align: right;
-            background: rgba(255,255,255,0.06);
-            padding: 8px 24px;
-            border-radius: 40px;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(212, 168, 67, 0.2);
-        }
-        .header-right .dept {
-            font-size: 14px;
-            font-weight: 600;
-            color: #d4a843;
-            letter-spacing: 0.5px;
-        }
-        .header-right .location {
-            font-size: 20px;
-            font-weight: 700;
-            color: #ffffff;
-            letter-spacing: 0.5px;
-        }
-        .header-right .location small {
-            font-weight: 400;
-            font-size: 14px;
-            color: #94a3b8;
-        }
-
-        /* ----- Cards ----- */
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 24px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.03);
-            transition: box-shadow 0.2s;
-        }
-        .card:hover {
-            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
-        }
-        .card-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            color: #0b1a33;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .card-title .step-badge {
-            background: #0b1a33;
-            color: #d4a843;
-            padding: 2px 14px;
-            border-radius: 30px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        /* ----- Layout: two columns ----- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 30px;
-        }
-        @media (max-width: 1100px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* ----- Filters ----- */
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 14px;
-            margin-bottom: 16px;
-        }
-        .filter-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 700;
-            color: #334155;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-        .filter-group select,
-        .filter-group input {
-            width: 100%;
-            padding: 8px 12px;
-            font-size: 14px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 10px;
-            background: #f8fafc;
-            font-family: inherit;
-            transition: 0.2s;
-            outline: none;
-            color: #1e293b;
-        }
-        .filter-group select:focus,
-        .filter-group input:focus {
-            border-color: #0b1a33;
-            box-shadow: 0 0 0 3px rgba(11, 26, 51, 0.1);
-        }
-
-        /* ----- Table ----- */
-        .table-wrapper {
-            max-height: 260px;
-            overflow-y: auto;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            margin-top: 12px;
-        }
-        .table-wrapper table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .table-wrapper th {
-            background: #f1f5f9;
-            padding: 10px 12px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            color: #0b1a33;
-            font-weight: 700;
-            border-bottom: 2px solid #cbd5e1;
-        }
-        .table-wrapper td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            cursor: pointer;
-        }
-        .table-wrapper tr:hover td {
-            background: #f8fafc;
-        }
-        .village-link {
-            color: #0b1a33;
-            font-weight: 600;
-            text-decoration: none;
-            border-bottom: 2px solid #d4a843;
-            transition: 0.15s;
-            cursor: pointer;
-        }
-        .village-link:hover {
-            color: #d4a843;
-            border-bottom-color: #0b1a33;
-        }
-        .no-results {
-            text-align: center;
-            padding: 30px;
-            color: #64748b;
-            font-style: italic;
-        }
-
-        /* ----- Checkbox Grid ----- */
-        .checkbox-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 6px;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 12px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            background: #f8fafc;
-            margin-bottom: 16px;
-        }
-        .checkbox-grid label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: #1e293b;
-            cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 4px;
-            transition: 0.1s;
-        }
-        .checkbox-grid label:hover {
-            background: #e2e8f0;
-        }
-        .checkbox-grid .all-tables {
-            grid-column: 1 / -1;
-            font-weight: 700;
-            padding: 6px 0 10px 0;
-            border-bottom: 2px solid #cbd5e1;
-            margin-bottom: 6px;
-            color: #0b1a33;
-        }
-        .checkbox-grid input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #0b1a33;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        /* ----- Buttons ----- */
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .btn {
-            padding: 8px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-            font-family: inherit;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-primary {
-            background: #0b1a33;
-            color: white;
-            box-shadow: 0 4px 12px rgba(11, 26, 51, 0.2);
-        }
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(11, 26, 51, 0.3);
-        }
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #1e293b;
-            border: 1px solid #cbd5e1;
-        }
-        .btn-secondary:hover {
-            background: #cbd5e1;
-        }
-        .btn-success {
-            background: #0b1a33;
-            color: #d4a843;
-            box-shadow: 0 4px 12px rgba(11, 26, 51, 0.2);
-            width: 100%;
-            justify-content: center;
-            padding: 12px;
-            font-size: 15px;
-            font-weight: 700;
-        }
-        .btn-success:hover {
-            background: #1a3a5c;
-            color: #ffd966;
-        }
-        .btn-sm {
-            padding: 5px 14px;
-            font-size: 12px;
-            border-radius: 8px;
-        }
-
-        /* ----- Query Output ----- */
-        .query-output {
-            background: #0b1a33;
-            border-radius: 12px;
-            padding: 16px;
-            color: #e2e8f0;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            border-left: 4px solid #d4a843;
-            margin-top: 12px;
-            line-height: 1.8;
-        }
-        .query-output .empty {
-            color: #94a3b8;
-            font-style: italic;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: #f0f4f8; color: #1e293b; padding: 20px; min-height: 100vh; }
+        .container { max-width: 1440px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #0b1a33 0%, #1a3a5c 60%, #2a5a7a 100%); border-radius: 24px; padding: 24px 32px; margin-bottom: 30px; box-shadow: 0 12px 40px rgba(10,30,60,0.25); border-bottom: 5px solid #d4a843; position: relative; overflow: hidden; }
+        .header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%); border-radius: 50%; }
+        .header-grid { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; position: relative; z-index: 1; }
+        .header-left { display: flex; align-items: center; gap: 18px; }
+        .emblem { width: 70px; height: 70px; background: #f8f4ea; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 700; color: #0b1a33; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 3px solid #d4a843; }
+        .header-titles .gov-tag { font-size: 12px; font-weight: 700; letter-spacing: 2.5px; color: #d4a843; text-transform: uppercase; }
+        .header-titles .main-title { font-size: 28px; font-weight: 700; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.15); line-height: 1.2; }
+        .header-titles .sub-title { font-size: 18px; font-weight: 400; color: #cbd5e1; letter-spacing: 0.3px; }
+        .header-right { text-align: right; background: rgba(255,255,255,0.06); padding: 8px 24px; border-radius: 40px; backdrop-filter: blur(4px); border: 1px solid rgba(212,168,67,0.2); }
+        .header-right .dept { font-size: 14px; font-weight: 600; color: #d4a843; letter-spacing: 0.5px; }
+        .header-right .location { font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; }
+        .header-right .location small { font-weight: 400; font-size: 14px; color: #94a3b8; }
+        .card { background: white; border-radius: 20px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 6px 20px rgba(0,0,0,0.03); transition: box-shadow 0.2s; }
+        .card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
+        .card-title { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 700; color: #0b1a33; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-title .step-badge { background: #0b1a33; color: #d4a843; padding: 2px 14px; border-radius: 30px; font-size: 12px; font-weight: 700; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
+        @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 16px; }
+        .filter-group label { display: block; font-size: 11px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .filter-group select, .filter-group input { width: 100%; padding: 8px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f8fafc; font-family: inherit; transition: 0.2s; outline: none; color: #1e293b; }
+        .filter-group select:focus, .filter-group input:focus { border-color: #0b1a33; box-shadow: 0 0 0 3px rgba(11,26,51,0.1); }
+        .table-wrapper { max-height: 260px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-top: 12px; }
+        .table-wrapper table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .table-wrapper th { background: #f1f5f9; padding: 10px 12px; text-align: left; position: sticky; top: 0; z-index: 2; color: #0b1a33; font-weight: 700; border-bottom: 2px solid #cbd5e1; }
+        .table-wrapper td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer; }
+        .table-wrapper tr:hover td { background: #f8fafc; }
+        .village-link { color: #0b1a33; font-weight: 600; text-decoration: none; border-bottom: 2px solid #d4a843; transition: 0.15s; cursor: pointer; }
+        .village-link:hover { color: #d4a843; border-bottom-color: #0b1a33; }
+        .no-results { text-align: center; padding: 30px; color: #64748b; font-style: italic; }
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; max-height: 200px; overflow-y: auto; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #f8fafc; margin-bottom: 16px; }
+        .checkbox-grid label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1e293b; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: 0.1s; }
+        .checkbox-grid label:hover { background: #e2e8f0; }
+        .checkbox-grid .all-tables { grid-column: 1 / -1; font-weight: 700; padding: 6px 0 10px 0; border-bottom: 2px solid #cbd5e1; margin-bottom: 6px; color: #0b1a33; }
+        .checkbox-grid input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0b1a33; cursor: pointer; flex-shrink: 0; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 8px 20px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #0b1a33; color: white; box-shadow: 0 4px 12px rgba(11,26,51,0.2); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(11,26,51,0.3); }
+        .btn-secondary { background: #e2e8f0; color: #1e293b; border: 1px solid #cbd5e1; }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn-success { background: #0b1a33; color: #d4a843; box-shadow: 0 4px 12px rgba(11,26,51,0.2); width: 100%; justify-content: center; padding: 12px; font-size: 15px; font-weight: 700; }
+        .btn-success:hover { background: #1a3a5c; color: #ffd966; }
+        .btn-sm { padding: 5px 14px; font-size: 12px; border-radius: 8px; }
+        .query-output { background: #0b1a33; border-radius: 12px; padding: 16px; color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border-left: 4px solid #d4a843; margin-top: 12px; line-height: 1.8; }
+        .query-output .empty { color: #94a3b8; font-style: italic; }
         .query-output .highlight { color: #ffd966; }
         .query-output .table-name { color: #7dd3fc; font-weight: 600; }
         .query-output .keyword { color: #f472b6; }
         .query-output .number { color: #a78bfa; }
         .query-output .string { color: #fbbf24; }
-
-        /* ----- Code Stats ----- */
-        .code-stats {
-            font-size: 13px;
-            font-weight: 600;
-            color: #0b1a33;
-            background: #f1f5f9;
-            padding: 4px 16px;
-            border-radius: 20px;
-            border: 1px solid #cbd5e1;
-            white-space: nowrap;
-        }
-
-        /* ----- Report Form ----- */
-        .form-group {
-            margin-bottom: 16px;
-        }
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 700;
-            color: #334155;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin-bottom: 4px;
-        }
-        .form-group textarea,
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 8px 12px;
-            font-size: 14px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 10px;
-            background: #f8fafc;
-            font-family: inherit;
-            transition: 0.2s;
-            outline: none;
-            color: #1e293b;
-        }
-        .form-group textarea:focus,
-        .form-group input:focus,
-        .form-group select:focus {
-            border-color: #0b1a33;
-            box-shadow: 0 0 0 3px rgba(11, 26, 51, 0.1);
-        }
-        .form-group textarea {
-            min-height: 60px;
-            resize: vertical;
-        }
-        .form-group .code-input {
-            font-family: 'Consolas', 'Courier New', monospace;
-            background: #0b1a33;
-            color: #e2e8f0;
-            border-color: #1e3a5a;
-            min-height: 80px;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-        @media (max-width: 600px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* ----- Radio group for table filter ----- */
-        .radio-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 18px;
-            background: #f1f5f9;
-            padding: 8px 16px;
-            border-radius: 30px;
-            border: 1px solid #cbd5e1;
-            margin-bottom: 12px;
-        }
-        .radio-group label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #1e293b;
-            cursor: pointer;
-        }
-        .radio-group input[type="radio"] {
-            accent-color: #0b1a33;
-            width: 15px;
-            height: 15px;
-            cursor: pointer;
-        }
-
-        /* ----- Footer ----- */
-        .footer {
-            margin-top: 30px;
-            text-align: center;
-            padding: 16px;
-            color: #64748b;
-            font-size: 14px;
-            border-top: 1px solid #e2e8f0;
-        }
-        .footer a {
-            color: #0b1a33;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-            color: #d4a843;
-        }
-
-        /* ----- Responsive Tweaks ----- */
+        .code-stats { font-size: 13px; font-weight: 600; color: #0b1a33; background: #f1f5f9; padding: 4px 16px; border-radius: 20px; border: 1px solid #cbd5e1; white-space: nowrap; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+        .form-group textarea, .form-group input, .form-group select { width: 100%; padding: 8px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f8fafc; font-family: inherit; transition: 0.2s; outline: none; color: #1e293b; }
+        .form-group textarea:focus, .form-group input:focus, .form-group select:focus { border-color: #0b1a33; box-shadow: 0 0 0 3px rgba(11,26,51,0.1); }
+        .form-group textarea { min-height: 60px; resize: vertical; }
+        .form-group .code-input { font-family: 'Consolas', 'Courier New', monospace; background: #0b1a33; color: #e2e8f0; border-color: #1e3a5a; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+        .radio-group { display: flex; flex-wrap: wrap; gap: 6px 18px; background: #f1f5f9; padding: 8px 16px; border-radius: 30px; border: 1px solid #cbd5e1; margin-bottom: 12px; }
+        .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1e293b; cursor: pointer; }
+        .radio-group input[type="radio"] { accent-color: #0b1a33; width: 15px; height: 15px; cursor: pointer; }
+        .footer { margin-top: 30px; text-align: center; padding: 16px; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0; }
+        .footer a { color: #0b1a33; text-decoration: none; font-weight: 600; }
+        .footer a:hover { text-decoration: underline; color: #d4a843; }
         @media (max-width: 768px) {
-            .header-grid {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .header-right {
-                text-align: left;
-                width: 100%;
-            }
-            .header-titles .main-title {
-                font-size: 22px;
-            }
-            .header-titles .sub-title {
-                font-size: 16px;
-            }
-            .emblem {
-                width: 56px;
-                height: 56px;
-                font-size: 26px;
-            }
-            .card {
-                padding: 16px;
-            }
-            .filter-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-            .checkbox-grid {
-                grid-template-columns: 1fr 1fr;
-                max-height: 150px;
-            }
+            .header-grid { flex-direction: column; align-items: flex-start; }
+            .header-right { text-align: left; width: 100%; }
+            .header-titles .main-title { font-size: 22px; }
+            .header-titles .sub-title { font-size: 16px; }
+            .emblem { width: 56px; height: 56px; font-size: 26px; }
+            .card { padding: 16px; }
+            .filter-grid { grid-template-columns: 1fr 1fr; }
+            .checkbox-grid { grid-template-columns: 1fr 1fr; max-height: 150px; }
         }
         @media (max-width: 480px) {
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
-            .checkbox-grid {
-                grid-template-columns: 1fr;
-            }
-            .btn-group {
-                flex-direction: column;
-                width: 100%;
-            }
-            .btn-group .btn {
-                width: 100%;
-                justify-content: center;
-            }
+            .filter-grid { grid-template-columns: 1fr; }
+            .checkbox-grid { grid-template-columns: 1fr; }
+            .btn-group { flex-direction: column; width: 100%; }
+            .btn-group .btn { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -756,28 +309,21 @@ HTML_TEMPLATE = """
 <div class="container">
 
     <!-- ===== HEADER ===== -->
-<header class="header">
-    <div class="header-grid">
-        <!-- Left Side: Emblem and Titles -->
-        <div class="header-left">
-            <span class="emblem" aria-hidden="true">🏛️</span>
-            <div class="header-titles">
-                <h1 class="main-title">Deputy Commissioner Office</h1>
-                <h2 class="sub-title">Revenue Department, Bidar</h2>
+    <header class="header">
+        <div class="header-grid">
+            <div class="header-left">
+                <span class="emblem" aria-hidden="true">🏛️</span>
+                <div class="header-titles">
+                    <h1 class="main-title">Deputy Commissioner Office</h1>
+                    <h2 class="sub-title">Revenue Department, Bidar</h2>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="dept"><span aria-hidden="true">📋</span> District Administration</div>
+                <div class="location">Bidar <small>· Village Operations Panel</small></div>
             </div>
         </div>
-        
-        <!-- Right Side: Department and Location Info -->
-        <div class="header-right">
-            <div class="dept">
-                <span aria-hidden="true">📋</span> District Administration
-            </div>
-            <div class="location">
-                Bidar <small>· Village Operations Panel</small>
-            </div>
-        </div>
-    </div>
-</header>
+    </header>
 
     <!-- ===== DASHBOARD ===== -->
     <div class="dashboard-grid">
@@ -1700,7 +1246,7 @@ HTML_TEMPLATE = """
     ];
 
     // ================================================================
-    //  JAVASCRIPT LOGIC – FIXED QUERY GENERATION
+    //  JAVASCRIPT LOGIC
     // ================================================================
     let currentChecked = new Set();
 
@@ -1859,19 +1405,37 @@ HTML_TEMPLATE = """
         });
         tbody.innerHTML = html;
 
+        // --- FIXED: Click handler for village links ---
         document.querySelectorAll('.village-link').forEach(el => {
             el.addEventListener('click', function(e) {
                 const dist = this.dataset.dist;
                 const taluk = this.dataset.taluk;
                 const hobli = this.dataset.hobli;
                 const village = this.dataset.village;
+
+                // Set district and rebuild taluks
                 districtSel.value = dist;
-                populateTaluks();
+                const filteredTaluks = rows.filter(r => r[0] === dist);
+                const taluks = getUniqueValues(1, filteredTaluks);
+                talukSel.innerHTML = '<option value="">All Taluks</option>' +
+                    taluks.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
                 talukSel.value = taluk;
-                populateHoblis();
+
+                // Rebuild hoblis based on district + taluk
+                const filteredHoblis = rows.filter(r => r[0] === dist && r[1] === taluk);
+                const hoblis = getUniqueValues(2, filteredHoblis);
+                hobliSel.innerHTML = '<option value="">All Hoblis</option>' +
+                    hoblis.map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
                 hobliSel.value = hobli;
-                populateVillages();
+
+                // Rebuild villages based on district + taluk + hobli
+                const filteredVillages = rows.filter(r => r[0] === dist && r[1] === taluk && r[2] === hobli);
+                const villages = getUniqueValues(3, filteredVillages);
+                villageSel.innerHTML = '<option value="">All Villages</option>' +
+                    villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
                 villageSel.value = village;
+
+                // Update search input and table
                 searchInput.value = village;
                 applyFilters();
                 generateQueries();
@@ -1898,7 +1462,7 @@ HTML_TEMPLATE = """
         return { dc, tc, hc, vc };
     }
 
-    // ---- Generate Queries (FIXED) ----
+    // ---- Generate Queries ----
     function generateQueries() {
         const d = districtSel.value;
         const t = talukSel.value;
@@ -1920,7 +1484,6 @@ HTML_TEMPLATE = """
             return;
         }
 
-        // Build conditions from whatever filters are selected
         const conds = [];
         if (dc !== null) conds.push(`dist_code = ${dc}`);
         if (tc !== null) conds.push(`taluk_code = ${tc}`);
@@ -2035,8 +1598,10 @@ def generate():
     )
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
     print("--------------------------------------------------")
-    print(" 🚀 Server running at http://127.0.0.1:5000")
-    print(" ✅ Query generation now works with any filters you choose.")
+    print(f" 🚀 Server running on port {port}")
+    print(" ✅ Village click fixed – dropdowns update correctly.")
     print("--------------------------------------------------")
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
