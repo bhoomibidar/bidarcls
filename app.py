@@ -2,7 +2,7 @@ import os
 import re
 import io
 from datetime import datetime
-from flask import Flask, render_template_string, request, send_file
+from flask import Flask, render_template_string, request, send_file, url_for
 
 import docx
 from docx.shared import Pt, Inches, RGBColor
@@ -13,7 +13,9 @@ from docx.oxml.ns import nsdecls, qn
 
 app = Flask(__name__)
 
-# --- WORD DOCUMENT GENERATION (unchanged) ---
+# -------------------------------------------------------------------
+# WORD DOCUMENT GENERATION (unchanged)
+# -------------------------------------------------------------------
 def create_element(name):
     return OxmlElement(name)
 
@@ -99,16 +101,14 @@ def generate_docx(data):
     doc = docx.Document()
     section = doc.sections[0]
     section.orientation = WD_ORIENT.LANDSCAPE
-    
     new_width, new_height = section.page_height, section.page_width
     section.page_width = new_width
     section.page_height = new_height
-    
     section.top_margin = Inches(0.8)
     section.bottom_margin = Inches(0.8)
     section.left_margin = Inches(0.8)
     section.right_margin = Inches(0.8)
-    
+
     p_title = doc.add_paragraph()
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_title.paragraph_format.space_after = Pt(24)
@@ -117,7 +117,7 @@ def generate_docx(data):
     r_title.font.size = Pt(18)
     r_title.font.bold = True
     r_title.font.color.rgb = RGBColor(11, 37, 69)
-    
+
     # 1) CLS Details
     add_styled_heading(doc, "1) CLS Details:")
     t1 = doc.add_table(rows=2, cols=4)
@@ -127,7 +127,7 @@ def generate_docx(data):
         set_cell_shading(t1.cell(0, i), "0B2545")
         set_cell_margins(t1.cell(0, i))
         format_cell_text(t1.cell(0, i), bold=True, text=h, color=RGBColor(255, 255, 255), alignment=WD_ALIGN_PARAGRAPH.CENTER)
-    
+
     data1 = [data['report_date'], "Bidar", "Aravind Badagi", data['cls_number']]
     for i, d in enumerate(data1):
         set_cell_margins(t1.cell(1, i))
@@ -136,7 +136,7 @@ def generate_docx(data):
     t1.columns[1].width = Inches(2.0)
     t1.columns[2].width = Inches(2.5)
     t1.columns[3].width = Inches(2.89)
-    
+
     # 2) Issue Details
     add_styled_heading(doc, "2) Details of the Issue:")
     t2 = doc.add_table(rows=2, cols=4)
@@ -146,7 +146,7 @@ def generate_docx(data):
         set_cell_shading(t2.cell(0, i), "0B2545")
         set_cell_margins(t2.cell(0, i))
         format_cell_text(t2.cell(0, i), bold=True, text=h, color=RGBColor(255, 255, 255), alignment=WD_ALIGN_PARAGRAPH.CENTER)
-        
+
     format_cell_text(t2.cell(1, 0), text="Bhoomi", alignment=WD_ALIGN_PARAGRAPH.CENTER)
     format_cell_text(t2.cell(1, 1), text="Bhoomi", alignment=WD_ALIGN_PARAGRAPH.CENTER)
     format_cell_text(t2.cell(1, 2), text=data.get('issue_type', 'Technical'), alignment=WD_ALIGN_PARAGRAPH.CENTER)
@@ -162,15 +162,15 @@ def generate_docx(data):
             issue_lines.append(f"{label}: {value}")
     issue_text = "\n".join(issue_lines) if issue_lines else "No description provided"
     format_cell_text(t2.cell(1, 3), text=issue_text)
-    for i in range(4): 
+    for i in range(4):
         set_cell_margins(t2.cell(1, i))
     t2.columns[0].width = Inches(1.5)
     t2.columns[1].width = Inches(1.5)
     t2.columns[2].width = Inches(1.8)
     t2.columns[3].width = Inches(4.59)
-    
+
     tables_list = extract_table_names(data['select_block'] + "\n" + data['update_block'])
-    
+
     # 3) Findings and Analysis
     add_styled_heading(doc, "3) Findings and Analysis:")
     t3 = doc.add_table(rows=2, cols=4)
@@ -180,7 +180,7 @@ def generate_docx(data):
         set_cell_shading(t3.cell(0, i), "0B2545")
         set_cell_margins(t3.cell(0, i))
         format_cell_text(t3.cell(0, i), bold=True, text=h, color=RGBColor(255, 255, 255), alignment=WD_ALIGN_PARAGRAPH.CENTER)
-        
+
     set_cell_margins(t3.cell(1, 0))
     format_cell_text(t3.cell(1, 0), text=tables_list)
     set_cell_margins(t3.cell(1, 1))
@@ -193,21 +193,21 @@ def generate_docx(data):
     t3.columns[1].width = Inches(2.5)
     t3.columns[2].width = Inches(2.0)
     t3.columns[3].width = Inches(2.89)
-    
+
     add_styled_heading(doc, "4) \"Select\" Query for all the related/analyzed tables:")
     add_code_block(doc, data['select_block'])
-    
+
     add_styled_heading(doc, "5) \"Update\" Query for the solution:")
     add_code_block(doc, data['update_block'])
-    
+
     file_stream = io.BytesIO()
     doc.save(file_stream)
     file_stream.seek(0)
     return file_stream
 
-# ===================================================================
-#  COMPLETE HTML TEMPLATE WITH ALL VILLAGES EMBEDDED
-# ===================================================================
+# -------------------------------------------------------------------
+# COMPLETE HTML TEMPLATE with all villages and professional theme
+# -------------------------------------------------------------------
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -215,83 +215,476 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bidar District · Revenue Command Center</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* ----- Reset & Base ----- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: #f0f4f8; color: #1e293b; padding: 20px; min-height: 100vh; }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #f0f4f8;
+            color: #1e293b;
+            padding: 20px;
+            min-height: 100vh;
+        }
         .container { max-width: 1440px; margin: 0 auto; }
-        .header { background: linear-gradient(135deg, #0b1a33 0%, #1a3a5c 60%, #2a5a7a 100%); border-radius: 24px; padding: 24px 32px; margin-bottom: 30px; box-shadow: 0 12px 40px rgba(10,30,60,0.25); border-bottom: 5px solid #d4a843; position: relative; overflow: hidden; }
-        .header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%); border-radius: 50%; }
-        .header-grid { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; position: relative; z-index: 1; }
-        .header-left { display: flex; align-items: center; gap: 18px; }
-        .emblem { width: 70px; height: 70px; background: #f8f4ea; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 700; color: #0b1a33; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 3px solid #d4a843; }
-        .header-titles .gov-tag { font-size: 12px; font-weight: 700; letter-spacing: 2.5px; color: #d4a843; text-transform: uppercase; }
-        .header-titles .main-title { font-size: 28px; font-weight: 700; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.15); line-height: 1.2; }
-        .header-titles .sub-title { font-size: 18px; font-weight: 400; color: #cbd5e1; letter-spacing: 0.3px; }
-        .header-right { text-align: right; background: rgba(255,255,255,0.06); padding: 8px 24px; border-radius: 40px; backdrop-filter: blur(4px); border: 1px solid rgba(212,168,67,0.2); }
-        .header-right .dept { font-size: 14px; font-weight: 600; color: #d4a843; letter-spacing: 0.5px; }
-        .header-right .location { font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; }
-        .header-right .location small { font-weight: 400; font-size: 14px; color: #94a3b8; }
-        .card { background: white; border-radius: 20px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 6px 20px rgba(0,0,0,0.03); transition: box-shadow 0.2s; }
-        .card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
-        .card-title { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 700; color: #0b1a33; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .card-title .step-badge { background: #0b1a33; color: #d4a843; padding: 2px 14px; border-radius: 30px; font-size: 12px; font-weight: 700; }
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
-        @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 16px; }
-        .filter-group label { display: block; font-size: 11px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .filter-group select, .filter-group input { width: 100%; padding: 8px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f8fafc; font-family: inherit; transition: 0.2s; outline: none; color: #1e293b; }
-        .filter-group select:focus, .filter-group input:focus { border-color: #0b1a33; box-shadow: 0 0 0 3px rgba(11,26,51,0.1); }
-        .table-wrapper { max-height: 260px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-top: 12px; }
-        .table-wrapper table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .table-wrapper th { background: #f1f5f9; padding: 10px 12px; text-align: left; position: sticky; top: 0; z-index: 2; color: #0b1a33; font-weight: 700; border-bottom: 2px solid #cbd5e1; }
-        .table-wrapper td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer; }
-        .table-wrapper tr:hover td { background: #f8fafc; }
-        .village-link { color: #0b1a33; font-weight: 600; text-decoration: none; border-bottom: 2px solid #d4a843; transition: 0.15s; cursor: pointer; }
-        .village-link:hover { color: #d4a843; border-bottom-color: #0b1a33; }
-        .no-results { text-align: center; padding: 30px; color: #64748b; font-style: italic; }
-        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; max-height: 200px; overflow-y: auto; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #f8fafc; margin-bottom: 16px; }
-        .checkbox-grid label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1e293b; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: 0.1s; }
-        .checkbox-grid label:hover { background: #e2e8f0; }
-        .checkbox-grid .all-tables { grid-column: 1 / -1; font-weight: 700; padding: 6px 0 10px 0; border-bottom: 2px solid #cbd5e1; margin-bottom: 6px; color: #0b1a33; }
-        .checkbox-grid input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0b1a33; cursor: pointer; flex-shrink: 0; }
-        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .btn { padding: 8px 20px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-primary { background: #0b1a33; color: white; box-shadow: 0 4px 12px rgba(11,26,51,0.2); }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(11,26,51,0.3); }
-        .btn-secondary { background: #e2e8f0; color: #1e293b; border: 1px solid #cbd5e1; }
-        .btn-secondary:hover { background: #cbd5e1; }
-        .btn-success { background: #0b1a33; color: #d4a843; box-shadow: 0 4px 12px rgba(11,26,51,0.2); width: 100%; justify-content: center; padding: 12px; font-size: 15px; font-weight: 700; }
-        .btn-success:hover { background: #1a3a5c; color: #ffd966; }
-        .btn-sm { padding: 5px 14px; font-size: 12px; border-radius: 8px; }
-        .query-output { background: #0b1a33; border-radius: 12px; padding: 16px; color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border-left: 4px solid #d4a843; margin-top: 12px; line-height: 1.8; }
-        .query-output .empty { color: #94a3b8; font-style: italic; }
-        .query-output .highlight { color: #ffd966; }
-        .query-output .table-name { color: #7dd3fc; font-weight: 600; }
-        .query-output .keyword { color: #f472b6; }
-        .query-output .number { color: #a78bfa; }
-        .query-output .string { color: #fbbf24; }
-        .code-stats { font-size: 13px; font-weight: 600; color: #0b1a33; background: #f1f5f9; padding: 4px 16px; border-radius: 20px; border: 1px solid #cbd5e1; white-space: nowrap; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
-        .form-group textarea, .form-group input, .form-group select { width: 100%; padding: 8px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f8fafc; font-family: inherit; transition: 0.2s; outline: none; color: #1e293b; }
-        .form-group textarea:focus, .form-group input:focus, .form-group select:focus { border-color: #0b1a33; box-shadow: 0 0 0 3px rgba(11,26,51,0.1); }
-        .form-group textarea { min-height: 60px; resize: vertical; }
-        .form-group .code-input { font-family: 'Consolas', 'Courier New', monospace; background: #0b1a33; color: #e2e8f0; border-color: #1e3a5a; min-height: 80px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
-        .radio-group { display: flex; flex-wrap: wrap; gap: 6px 18px; background: #f1f5f9; padding: 8px 16px; border-radius: 30px; border: 1px solid #cbd5e1; margin-bottom: 12px; }
-        .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1e293b; cursor: pointer; }
-        .radio-group input[type="radio"] { accent-color: #0b1a33; width: 15px; height: 15px; cursor: pointer; }
-        .footer { margin-top: 30px; text-align: center; padding: 16px; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0; }
-        .footer a { color: #0b1a33; text-decoration: none; font-weight: 600; }
-        .footer a:hover { text-decoration: underline; color: #d4a843; }
+
+        /* ----- Header with logo ----- */
+        .header {
+            background: linear-gradient(135deg, #0b1a33 0%, #1a3a5c 60%, #2a5a7a 100%);
+            border-radius: 24px;
+            padding: 20px 32px;
+            margin-bottom: 30px;
+            box-shadow: 0 12px 40px rgba(10,30,60,0.25);
+            border-bottom: 5px solid #d4a843;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .header-grid {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            position: relative;
+            z-index: 1;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .header-logo {
+            height: 70px;
+            width: auto;
+            filter: brightness(1.1);
+            border-radius: 8px;
+        }
+        .header-titles .gov-tag {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            color: #d4a843;
+            text-transform: uppercase;
+        }
+        .header-titles .main-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            line-height: 1.2;
+        }
+        .header-titles .sub-title {
+            font-size: 18px;
+            font-weight: 400;
+            color: #cbd5e1;
+            letter-spacing: 0.3px;
+        }
+        .header-right {
+            text-align: right;
+            background: rgba(255,255,255,0.06);
+            padding: 8px 24px;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(212,168,67,0.2);
+        }
+        .header-right .dept {
+            font-size: 14px;
+            font-weight: 600;
+            color: #d4a843;
+            letter-spacing: 0.5px;
+        }
+        .header-right .location {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+        .header-right .location small {
+            font-weight: 400;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        /* ----- Cards ----- */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.03);
+            transition: box-shadow 0.2s;
+            margin-bottom: 24px;
+        }
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #0b1a33;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .card-title .step-badge {
+            background: #0b1a33;
+            color: #d4a843;
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .card-title i {
+            color: #d4a843;
+            font-size: 20px;
+        }
+
+        /* ----- Grid & Filters ----- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 1100px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .filter-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            font-family: inherit;
+            transition: 0.2s;
+            outline: none;
+            color: #1e293b;
+        }
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #0b1a33;
+            box-shadow: 0 0 0 3px rgba(11,26,51,0.1);
+        }
+
+        /* ----- Table ----- */
+        .table-wrapper {
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            margin-top: 12px;
+        }
+        .table-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .table-wrapper th {
+            background: #f1f5f9;
+            padding: 10px 12px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            color: #0b1a33;
+            font-weight: 700;
+            border-bottom: 2px solid #cbd5e1;
+        }
+        .table-wrapper td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+        }
+        .table-wrapper tr:hover td {
+            background: #f8fafc;
+        }
+        .village-link {
+            color: #0b1a33;
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 2px solid #d4a843;
+            transition: 0.15s;
+            cursor: pointer;
+        }
+        .village-link:hover {
+            color: #d4a843;
+            border-bottom-color: #0b1a33;
+        }
+        .no-results {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* ----- Checkbox grid for tables ----- */
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            margin-bottom: 16px;
+        }
+        .checkbox-grid label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #1e293b;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: 0.1s;
+        }
+        .checkbox-grid label:hover {
+            background: #e2e8f0;
+        }
+        .checkbox-grid .all-tables {
+            grid-column: 1 / -1;
+            font-weight: 700;
+            padding: 6px 0 10px 0;
+            border-bottom: 2px solid #cbd5e1;
+            margin-bottom: 6px;
+            color: #0b1a33;
+        }
+        .checkbox-grid input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #0b1a33;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* ----- Buttons ----- */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .btn {
+            padding: 8px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #0b1a33;
+            color: white;
+            box-shadow: 0 4px 12px rgba(11,26,51,0.2);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(11,26,51,0.3);
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+        .btn-success {
+            background: #0b1a33;
+            color: #d4a843;
+            box-shadow: 0 4px 12px rgba(11,26,51,0.2);
+            width: 100%;
+            justify-content: center;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .btn-success:hover {
+            background: #1a3a5c;
+            color: #ffd966;
+        }
+        .btn-sm {
+            padding: 5px 14px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        /* ----- Query output ----- */
+        .query-output {
+            background: #0b1a33;
+            border-radius: 12px;
+            padding: 16px;
+            color: #e2e8f0;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border-left: 4px solid #d4a843;
+            margin-top: 12px;
+            line-height: 1.8;
+        }
+        .query-output .empty {
+            color: #94a3b8;
+            font-style: italic;
+        }
+        .code-stats {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0b1a33;
+            background: #f1f5f9;
+            padding: 4px 16px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            white-space: nowrap;
+        }
+
+        /* ----- Form ----- */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 4px;
+        }
+        .form-group textarea,
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            font-family: inherit;
+            transition: 0.2s;
+            outline: none;
+            color: #1e293b;
+        }
+        .form-group textarea:focus,
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #0b1a33;
+            box-shadow: 0 0 0 3px rgba(11,26,51,0.1);
+        }
+        .form-group textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+        .form-group .code-input {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: #0b1a33;
+            color: #e2e8f0;
+            border-color: #1e3a5a;
+            min-height: 80px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 18px;
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid #cbd5e1;
+            margin-bottom: 12px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            accent-color: #0b1a33;
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+
+        /* ----- Footer ----- */
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            padding: 16px;
+            color: #64748b;
+            font-size: 14px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer a {
+            color: #0b1a33;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+            color: #d4a843;
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
             .header-grid { flex-direction: column; align-items: flex-start; }
             .header-right { text-align: left; width: 100%; }
             .header-titles .main-title { font-size: 22px; }
             .header-titles .sub-title { font-size: 16px; }
-            .emblem { width: 56px; height: 56px; font-size: 26px; }
+            .header-logo { height: 50px; }
             .card { padding: 16px; }
             .filter-grid { grid-template-columns: 1fr 1fr; }
             .checkbox-grid { grid-template-columns: 1fr 1fr; max-height: 150px; }
@@ -308,24 +701,25 @@ HTML_TEMPLATE = """
 
 <div class="container">
 
-    <!-- ===== HEADER ===== -->
+    <!-- ===== HEADER WITH LOGO ===== -->
     <header class="header">
         <div class="header-grid">
             <div class="header-left">
-              <img src="logo2.png" alt="Government Logo" class="header-logo" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div class=\'emblem-fallback\'></div>';">
+                <img src="{{ url_for('static', filename='logo2.png') }}" alt="Government Logo" class="header-logo">
                 <div class="header-titles">
+                    <div class="gov-tag"><i class="fas fa-landmark"></i> Government of Karnataka</div>
                     <h1 class="main-title">Deputy Commissioner Office</h1>
                     <h2 class="sub-title">Revenue Department, Bidar</h2>
                 </div>
             </div>
             <div class="header-right">
-                <div class="dept"><span aria-hidden="true">📋</span> District Administration</div>
+                <div class="dept"><i class="fas fa-file-signature"></i> District Administration</div>
                 <div class="location">Bidar <small>· Village Operations Panel</small></div>
             </div>
         </div>
     </header>
 
-    <!-- ===== DASHBOARD ===== -->
+    <!-- ===== DASHBOARD GRID ===== -->
     <div class="dashboard-grid">
 
         <!-- LEFT COLUMN: Village Explorer + Query Generator -->
@@ -335,30 +729,30 @@ HTML_TEMPLATE = """
             <div class="card">
                 <div class="card-title">
                     <span class="step-badge">1</span>
-                    Village Explorer &amp; Code Lookup
+                    <i class="fas fa-map-marked-alt"></i> Village Explorer &amp; Code Lookup
                 </div>
 
                 <div class="filter-grid">
                     <div class="filter-group">
-                        <label>District</label>
+                        <label><i class="fas fa-globe"></i> District</label>
                         <select id="districtSelect"><option value="">All</option></select>
                     </div>
                     <div class="filter-group">
-                        <label>Taluk</label>
+                        <label><i class="fas fa-city"></i> Taluk</label>
                         <select id="talukSelect"><option value="">All</option></select>
                     </div>
                     <div class="filter-group">
-                        <label>Hobli</label>
+                        <label><i class="fas fa-layer-group"></i> Hobli</label>
                         <select id="hobliSelect"><option value="">All</option></select>
                     </div>
                     <div class="filter-group">
-                        <label>Village</label>
+                        <label><i class="fas fa-home"></i> Village</label>
                         <select id="villageSelect"><option value="">All</option></select>
                     </div>
                 </div>
 
                 <div class="filter-group">
-                    <label>🔍 Quick Search Village Name</label>
+                    <label><i class="fas fa-search"></i> Quick Search Village Name</label>
                     <input type="text" id="villageSearch" placeholder="Type to filter villages...">
                 </div>
 
@@ -370,36 +764,39 @@ HTML_TEMPLATE = """
                         <tbody id="tableBody"><tr><td colspan="4" class="no-results">Loading directory…</td></tr></tbody>
                     </table>
                 </div>
+                <div style="margin-top: 10px; font-size: 13px; color: #64748b;">
+                    <span id="showCount">0</span> of <span id="totalCount">0</span> villages shown.
+                </div>
             </div>
 
             <!-- STEP 2: Query Generator -->
             <div class="card">
                 <div class="card-title">
                     <span class="step-badge">2</span>
-                    System Query Generator
+                    <i class="fas fa-database"></i> System Query Generator
                 </div>
 
                 <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
                     <div class="filter-group" style="flex:1 1 160px;">
-                        <label>📄 Appl No</label>
+                        <label><i class="fas fa-file-alt"></i> Appl No</label>
                         <input type="text" id="applNoInput" placeholder="e.g. 123/2024">
                     </div>
                     <div class="filter-group" style="flex:1 1 160px;">
-                        <label>🔢 Tran No</label>
+                        <label><i class="fas fa-exchange-alt"></i> Tran No</label>
                         <input type="text" id="tranNoInput" placeholder="e.g. 45/2024">
                     </div>
                     <div class="filter-group" style="flex:1 1 160px;">
-                        <label>🗺️ Land Code</label>
+                        <label><i class="fas fa-map-pin"></i> Land Code</label>
                         <input type="text" id="landCodeInput" placeholder="e.g. LAND123">
                     </div>
                     <div class="filter-group" style="flex:1 1 160px;">
-                        <label>📅 Year Code</label>
+                        <label><i class="fas fa-calendar-alt"></i> Year Code</label>
                         <input type="text" id="yearCodeInput" placeholder="e.g. 2024">
                     </div>
                 </div>
 
                 <label style="font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px;">
-                    📋 Select Tables
+                    <i class="fas fa-table"></i> Select Tables
                 </label>
                 <div class="radio-group" id="tableGroupRadio">
                     <label><input type="radio" name="tableGroup" value="all" checked> All</label>
@@ -413,15 +810,15 @@ HTML_TEMPLATE = """
 
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
                     <div class="btn-group">
-                        <button class="btn btn-secondary btn-sm" id="clearAllBtn">✖ Reset</button>
-                        <button class="btn btn-primary btn-sm" id="submitBtn">⚡ Compile Queries</button>
+                        <button class="btn btn-secondary btn-sm" id="clearAllBtn"><i class="fas fa-undo-alt"></i> Reset</button>
+                        <button class="btn btn-primary btn-sm" id="submitBtn"><i class="fas fa-bolt"></i> Compile Queries</button>
                     </div>
-                    <span class="code-stats" id="codeStats">📌 Codes: —</span>
+                    <span class="code-stats" id="codeStats"><i class="fas fa-code"></i> Codes: —</span>
                 </div>
 
                 <div style="margin-top:14px;">
                     <label style="font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px;">
-                        📄 Generated Queries
+                        <i class="fas fa-terminal"></i> Generated Queries
                     </label>
                     <div class="query-output" id="queryGrid">
                         <span class="empty">Select filters and click Compile</span>
@@ -435,50 +832,50 @@ HTML_TEMPLATE = """
             <div class="card" style="height:100%;">
                 <div class="card-title">
                     <span class="step-badge">3</span>
-                    Issue Report Generator
+                    <i class="fas fa-file-signature"></i> Issue Report Generator
                 </div>
 
                 <form method="POST" action="/generate" id="reportForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>📅 Report Date</label>
+                            <label><i class="fas fa-calendar-day"></i> Report Date</label>
                             <input type="text" name="report_date" value="{{ current_date }}" required>
                         </div>
                         <div class="form-group">
-                            <label>📞 CLS Number</label>
+                            <label><i class="fas fa-phone-alt"></i> CLS Number</label>
                             <input type="text" name="cls_number" placeholder="Optional reference">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>📄 App No</label>
+                            <label><i class="fas fa-file-alt"></i> App No</label>
                             <input type="text" name="app_no" id="reportAppNo" placeholder="Optional">
                         </div>
                         <div class="form-group">
-                            <label>🧾 Tran No</label>
+                            <label><i class="fas fa-exchange-alt"></i> Tran No</label>
                             <input type="text" name="tran_no" id="reportTranNo" placeholder="Optional">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>📆 Year</label>
+                            <label><i class="fas fa-calendar-alt"></i> Year</label>
                             <input type="text" name="year" id="reportYear" placeholder="Optional">
                         </div>
                         <div class="form-group">
-                            <label>🏞️ Land Code</label>
+                            <label><i class="fas fa-map-pin"></i> Land Code</label>
                             <input type="text" name="land_code" id="reportLandCode" placeholder="Optional">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>🌦️ Season</label>
+                            <label><i class="fas fa-cloud-sun"></i> Season</label>
                             <input type="text" name="season" id="reportSeason" placeholder="Optional">
                         </div>
                         <div class="form-group">
-                            <label>📋 Issue Type</label>
+                            <label><i class="fas fa-tags"></i> Issue Type</label>
                             <select name="issue_type" required>
                                 <option value="Technical">Technical</option>
                                 <option value="Administrative">Administrative</option>
@@ -487,37 +884,37 @@ HTML_TEMPLATE = """
                     </div>
 
                     <div class="form-group">
-                        <label>📝 Issue Description</label>
+                        <label><i class="fas fa-pencil-alt"></i> Issue Description</label>
                         <textarea id="form_issue_desc" name="issue_desc" placeholder="Describe the issue in detail..." required></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>🔍 Findings &amp; Analysis</label>
+                        <label><i class="fas fa-search"></i> Findings &amp; Analysis</label>
                         <textarea name="findings_desc" placeholder="Document your findings and analysis..." required></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>🎯 Root Cause</label>
+                        <label><i class="fas fa-bullseye"></i> Root Cause</label>
                         <input type="text" name="root_cause" placeholder="e.g., Data mismatch between tables" required>
                     </div>
 
                     <div class="form-group">
-                        <label>✅ Solution Provided</label>
+                        <label><i class="fas fa-check-circle"></i> Solution Provided</label>
                         <textarea name="sol_provided" placeholder="Describe the solution implemented..." required></textarea>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>🔎 SELECT Query</label>
+                            <label><i class="fas fa-search"></i> SELECT Query</label>
                             <textarea id="form_select_block" name="select_block" class="code-input" placeholder="SELECT * FROM table WHERE..." required></textarea>
                         </div>
                         <div class="form-group">
-                            <label>✏️ UPDATE Query</label>
+                            <label><i class="fas fa-pen"></i> UPDATE Query</label>
                             <textarea id="form_update_block" name="update_block" class="code-input" placeholder="UPDATE table SET..." required></textarea>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success">💾 Generate &amp; Download Word Report</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-file-word"></i> Generate &amp; Download Word Report</button>
                 </form>
             </div>
         </div>
@@ -525,7 +922,7 @@ HTML_TEMPLATE = """
 
     <!-- ===== FOOTER ===== -->
     <div class="footer">
-        Copyright © 2025 Bhoomi Monitoring Cell · Government of Karnataka · Bidar District · Revenue Department
+        <i class="fas fa-copyright"></i> 2025 Bhoomi Monitoring Cell · Government of Karnataka · Bidar District · Revenue Department
         <br>
         Developed &amp; Designed By:
         <a href="https://arvindbadagi.github.io/analytics/" target="_blank">Arvind Badagi</a>
@@ -1204,6 +1601,7 @@ HTML_TEMPLATE = """
         ["BIDAR (5)","HULASURA (8)","HULASURA (6)","KOTAMALA (18)"]
     ];
 
+    // Taluk mapping (as per original)
     const talukMap = {
         "BASAVAKALYAN (1)":"BASAVAKALYAN (3)",
         "BHALKI (2)":"BHALKI (2)",
@@ -1246,7 +1644,7 @@ HTML_TEMPLATE = """
     ];
 
     // ================================================================
-    //  JAVASCRIPT LOGIC
+    //  JAVASCRIPT LOGIC (unchanged from original, fully functional)
     // ================================================================
     let currentChecked = new Set();
 
@@ -1405,7 +1803,7 @@ HTML_TEMPLATE = """
         });
         tbody.innerHTML = html;
 
-        // --- FIXED: Click handler for village links ---
+        // Click handler for village links
         document.querySelectorAll('.village-link').forEach(el => {
             el.addEventListener('click', function(e) {
                 const dist = this.dataset.dist;
@@ -1413,7 +1811,6 @@ HTML_TEMPLATE = """
                 const hobli = this.dataset.hobli;
                 const village = this.dataset.village;
 
-                // Set district and rebuild taluks
                 districtSel.value = dist;
                 const filteredTaluks = rows.filter(r => r[0] === dist);
                 const taluks = getUniqueValues(1, filteredTaluks);
@@ -1421,21 +1818,18 @@ HTML_TEMPLATE = """
                     taluks.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
                 talukSel.value = taluk;
 
-                // Rebuild hoblis based on district + taluk
                 const filteredHoblis = rows.filter(r => r[0] === dist && r[1] === taluk);
                 const hoblis = getUniqueValues(2, filteredHoblis);
                 hobliSel.innerHTML = '<option value="">All Hoblis</option>' +
                     hoblis.map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
                 hobliSel.value = hobli;
 
-                // Rebuild villages based on district + taluk + hobli
                 const filteredVillages = rows.filter(r => r[0] === dist && r[1] === taluk && r[2] === hobli);
                 const villages = getUniqueValues(3, filteredVillages);
                 villageSel.innerHTML = '<option value="">All Villages</option>' +
                     villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
                 villageSel.value = village;
 
-                // Update search input and table
                 searchInput.value = village;
                 applyFilters();
                 generateQueries();
@@ -1540,7 +1934,7 @@ HTML_TEMPLATE = """
         const sa = document.getElementById('selectAllTables');
         if (sa) sa.checked = false;
         populateTaluks();
-        queryGrid.innerHTML = 'Select filters and click Generate Queries';
+        queryGrid.innerHTML = 'Select filters and click Compile';
         codeStats.textContent = '📌 Codes: —';
     }
 
@@ -1565,6 +1959,10 @@ HTML_TEMPLATE = """
 </body>
 </html>
 """
+
+# -------------------------------------------------------------------
+# FLASK ROUTES
+# -------------------------------------------------------------------
 
 @app.route('/')
 def home():
@@ -1602,6 +2000,8 @@ if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_ENV') != 'production'
     print("--------------------------------------------------")
     print(f" 🚀 Server running on port {port}")
-    print(" ✅ Village click fixed – dropdowns update correctly.")
+    print(" ✅ Logo will be served from /static/logo2.png")
+    print(" ✅ Professional theme applied")
+    print(" ✅ Full village dataset included")
     print("--------------------------------------------------")
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
