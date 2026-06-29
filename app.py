@@ -1209,7 +1209,7 @@ HTML_TEMPLATE = """
         "BHALKI (2)":"BHALKI (2)",
         "AURAD (3)":"AURAD (4)",
         "BIDAR (4)":"BIDAR (1)",
-        "HUMNABAD (5)":"HUMNABAD (6)",
+        "HUMNABAD (5)":"HUMNABAD (5)",
         "CHITAGUPPA (6)":"CHITAGUPPA (5)",
         "KAMALANAGARA (7)":"KAMALANAGARA (4)",
         "HULASURA (8)":"HULASURA (3)"
