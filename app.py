@@ -14,7 +14,7 @@ from docx.oxml.ns import nsdecls, qn
 app = Flask(__name__)
 
 # -------------------------------------------------------------------
-# WORD DOCUMENT GENERATION (unchanged)
+# WORD DOCUMENT GENERATION
 # -------------------------------------------------------------------
 def create_element(name):
     return OxmlElement(name)
@@ -156,7 +156,7 @@ def generate_docx(data):
         issue_lines.append(data['issue_desc'])
     meta_fields = [('App No', data.get('app_no')), ('Tran No', data.get('tran_no')),
                    ('Year', data.get('year')), ('Land Code', data.get('land_code')),
-                   ('Season', data.get('season'))]
+                   ('Season', data.get('season')), ('Survey No', data.get('survey_no'))]
     for label, value in meta_fields:
         if value and value.strip():
             issue_lines.append(f"{label}: {value}")
@@ -206,7 +206,7 @@ def generate_docx(data):
     return file_stream
 
 # -------------------------------------------------------------------
-# COMPLETE HTML TEMPLATE with all villages and professional theme
+# COMPLETE HTML TEMPLATE (with full dataset and Survey No)
 # -------------------------------------------------------------------
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -215,470 +215,73 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bidar District · Revenue Command Center</title>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* ----- Reset & Base ----- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-            background: #f0f4f8;
-            color: #1e293b;
-            padding: 20px;
-            min-height: 100vh;
-        }
+        body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: #f0f4f8; color: #1e293b; padding: 20px; min-height: 100vh; }
         .container { max-width: 1440px; margin: 0 auto; }
-
-        /* ----- Header with logo ----- */
-        .header {
-            background: linear-gradient(135deg, #0b1a33 0%, #1a3a5c 60%, #2a5a7a 100%);
-            border-radius: 24px;
-            padding: 20px 32px;
-            margin-bottom: 30px;
-            box-shadow: 0 12px 40px rgba(10,30,60,0.25);
-            border-bottom: 5px solid #d4a843;
-            position: relative;
-            overflow: hidden;
-        }
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-        .header-grid {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 16px;
-            position: relative;
-            z-index: 1;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-        }
-        .header-logo {
-            height: 70px;
-            width: auto;
-            filter: brightness(1.1);
-            border-radius: 8px;
-        }
-        .header-titles .gov-tag {
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 2.5px;
-            color: #d4a843;
-            text-transform: uppercase;
-        }
-        .header-titles .main-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            line-height: 1.2;
-        }
-        .header-titles .sub-title {
-            font-size: 18px;
-            font-weight: 400;
-            color: #cbd5e1;
-            letter-spacing: 0.3px;
-        }
-        .header-right {
-            text-align: right;
-            background: rgba(255,255,255,0.06);
-            padding: 8px 24px;
-            border-radius: 40px;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(212,168,67,0.2);
-        }
-        .header-right .dept {
-            font-size: 14px;
-            font-weight: 600;
-            color: #d4a843;
-            letter-spacing: 0.5px;
-        }
-        .header-right .location {
-            font-size: 20px;
-            font-weight: 700;
-            color: #ffffff;
-            letter-spacing: 0.5px;
-        }
-        .header-right .location small {
-            font-weight: 400;
-            font-size: 14px;
-            color: #94a3b8;
-        }
-
-        /* ----- Cards ----- */
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 24px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.03);
-            transition: box-shadow 0.2s;
-            margin-bottom: 24px;
-        }
-        .card:hover {
-            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
-        }
-        .card-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            color: #0b1a33;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .card-title .step-badge {
-            background: #0b1a33;
-            color: #d4a843;
-            padding: 2px 14px;
-            border-radius: 30px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-        .card-title i {
-            color: #d4a843;
-            font-size: 20px;
-        }
-
-        /* ----- Grid & Filters ----- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-        @media (max-width: 1100px) {
-            .dashboard-grid { grid-template-columns: 1fr; }
-        }
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 14px;
-            margin-bottom: 16px;
-        }
-        .filter-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 700;
-            color: #334155;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-        .filter-group select,
-        .filter-group input {
-            width: 100%;
-            padding: 8px 12px;
-            font-size: 14px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 10px;
-            background: #f8fafc;
-            font-family: inherit;
-            transition: 0.2s;
-            outline: none;
-            color: #1e293b;
-        }
-        .filter-group select:focus,
-        .filter-group input:focus {
-            border-color: #0b1a33;
-            box-shadow: 0 0 0 3px rgba(11,26,51,0.1);
-        }
-
-        /* ----- Table ----- */
-        .table-wrapper {
-            max-height: 260px;
-            overflow-y: auto;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            margin-top: 12px;
-        }
-        .table-wrapper table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .table-wrapper th {
-            background: #f1f5f9;
-            padding: 10px 12px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            color: #0b1a33;
-            font-weight: 700;
-            border-bottom: 2px solid #cbd5e1;
-        }
-        .table-wrapper td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            cursor: pointer;
-        }
-        .table-wrapper tr:hover td {
-            background: #f8fafc;
-        }
-        .village-link {
-            color: #0b1a33;
-            font-weight: 600;
-            text-decoration: none;
-            border-bottom: 2px solid #d4a843;
-            transition: 0.15s;
-            cursor: pointer;
-        }
-        .village-link:hover {
-            color: #d4a843;
-            border-bottom-color: #0b1a33;
-        }
-        .no-results {
-            text-align: center;
-            padding: 30px;
-            color: #64748b;
-            font-style: italic;
-        }
-
-        /* ----- Checkbox grid for tables ----- */
-        .checkbox-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 6px;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 12px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            background: #f8fafc;
-            margin-bottom: 16px;
-        }
-        .checkbox-grid label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: #1e293b;
-            cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 4px;
-            transition: 0.1s;
-        }
-        .checkbox-grid label:hover {
-            background: #e2e8f0;
-        }
-        .checkbox-grid .all-tables {
-            grid-column: 1 / -1;
-            font-weight: 700;
-            padding: 6px 0 10px 0;
-            border-bottom: 2px solid #cbd5e1;
-            margin-bottom: 6px;
-            color: #0b1a33;
-        }
-        .checkbox-grid input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #0b1a33;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        /* ----- Buttons ----- */
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .btn {
-            padding: 8px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-            font-family: inherit;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-primary {
-            background: #0b1a33;
-            color: white;
-            box-shadow: 0 4px 12px rgba(11,26,51,0.2);
-        }
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(11,26,51,0.3);
-        }
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #1e293b;
-            border: 1px solid #cbd5e1;
-        }
-        .btn-secondary:hover {
-            background: #cbd5e1;
-        }
-        .btn-success {
-            background: #0b1a33;
-            color: #d4a843;
-            box-shadow: 0 4px 12px rgba(11,26,51,0.2);
-            width: 100%;
-            justify-content: center;
-            padding: 12px;
-            font-size: 15px;
-            font-weight: 700;
-        }
-        .btn-success:hover {
-            background: #1a3a5c;
-            color: #ffd966;
-        }
-        .btn-sm {
-            padding: 5px 14px;
-            font-size: 12px;
-            border-radius: 8px;
-        }
-
-        /* ----- Query output ----- */
-        .query-output {
-            background: #0b1a33;
-            border-radius: 12px;
-            padding: 16px;
-            color: #e2e8f0;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            border-left: 4px solid #d4a843;
-            margin-top: 12px;
-            line-height: 1.8;
-        }
-        .query-output .empty {
-            color: #94a3b8;
-            font-style: italic;
-        }
-        .code-stats {
-            font-size: 13px;
-            font-weight: 600;
-            color: #0b1a33;
-            background: #f1f5f9;
-            padding: 4px 16px;
-            border-radius: 20px;
-            border: 1px solid #cbd5e1;
-            white-space: nowrap;
-        }
-
-        /* ----- Form ----- */
-        .form-group {
-            margin-bottom: 16px;
-        }
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 700;
-            color: #334155;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin-bottom: 4px;
-        }
-        .form-group textarea,
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 8px 12px;
-            font-size: 14px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 10px;
-            background: #f8fafc;
-            font-family: inherit;
-            transition: 0.2s;
-            outline: none;
-            color: #1e293b;
-        }
-        .form-group textarea:focus,
-        .form-group input:focus,
-        .form-group select:focus {
-            border-color: #0b1a33;
-            box-shadow: 0 0 0 3px rgba(11,26,51,0.1);
-        }
-        .form-group textarea {
-            min-height: 60px;
-            resize: vertical;
-        }
-        .form-group .code-input {
-            font-family: 'Consolas', 'Courier New', monospace;
-            background: #0b1a33;
-            color: #e2e8f0;
-            border-color: #1e3a5a;
-            min-height: 80px;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-        @media (max-width: 600px) {
-            .form-row { grid-template-columns: 1fr; }
-        }
-
-        .radio-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 18px;
-            background: #f1f5f9;
-            padding: 8px 16px;
-            border-radius: 30px;
-            border: 1px solid #cbd5e1;
-            margin-bottom: 12px;
-        }
-        .radio-group label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #1e293b;
-            cursor: pointer;
-        }
-        .radio-group input[type="radio"] {
-            accent-color: #0b1a33;
-            width: 15px;
-            height: 15px;
-            cursor: pointer;
-        }
-
-        /* ----- Footer ----- */
-        .footer {
-            margin-top: 30px;
-            text-align: center;
-            padding: 16px;
-            color: #64748b;
-            font-size: 14px;
-            border-top: 1px solid #e2e8f0;
-        }
-        .footer a {
-            color: #0b1a33;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-            color: #d4a843;
-        }
-
-        /* Responsive */
+        .header { background: linear-gradient(135deg, #0b1a33 0%, #1a3a5c 60%, #2a5a7a 100%); border-radius: 24px; padding: 20px 32px; margin-bottom: 30px; box-shadow: 0 12px 40px rgba(10,30,60,0.25); border-bottom: 5px solid #d4a843; position: relative; overflow: hidden; }
+        .header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%); border-radius: 50%; }
+        .header-grid { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; position: relative; z-index: 1; }
+        .header-left { display: flex; align-items: center; gap: 18px; }
+        .header-logo { height: 70px; width: auto; filter: brightness(1.1); border-radius: 8px; }
+        .header-titles .gov-tag { font-size: 12px; font-weight: 700; letter-spacing: 2.5px; color: #d4a843; text-transform: uppercase; }
+        .header-titles .main-title { font-size: 28px; font-weight: 700; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.15); line-height: 1.2; }
+        .header-titles .sub-title { font-size: 18px; font-weight: 400; color: #cbd5e1; letter-spacing: 0.3px; }
+        .header-right { text-align: right; background: rgba(255,255,255,0.06); padding: 8px 24px; border-radius: 40px; backdrop-filter: blur(4px); border: 1px solid rgba(212,168,67,0.2); }
+        .header-right .dept { font-size: 14px; font-weight: 600; color: #d4a843; letter-spacing: 0.5px; }
+        .header-right .location { font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; }
+        .header-right .location small { font-weight: 400; font-size: 14px; color: #94a3b8; }
+        .card { background: white; border-radius: 20px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 6px 20px rgba(0,0,0,0.03); transition: box-shadow 0.2s; margin-bottom: 24px; }
+        .card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
+        .card-title { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 700; color: #0b1a33; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-title .step-badge { background: #0b1a33; color: #d4a843; padding: 2px 14px; border-radius: 30px; font-size: 12px; font-weight: 700; }
+        .card-title i { color: #d4a843; font-size: 20px; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 16px; }
+        .filter-group label { display: block; font-size: 11px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .filter-group select, .filter-group input { width: 100%; padding: 8px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f8fafc; font-family: inherit; transition: 0.2s; outline: none; color: #1e293b; }
+        .filter-group select:focus, .filter-group input:focus { border-color: #0b1a33; box-shadow: 0 0 0 3px rgba(11,26,51,0.1); }
+        .table-wrapper { max-height: 260px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-top: 12px; }
+        .table-wrapper table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .table-wrapper th { background: #f1f5f9; padding: 10px 12px; text-align: left; position: sticky; top: 0; z-index: 2; color: #0b1a33; font-weight: 700; border-bottom: 2px solid #cbd5e1; }
+        .table-wrapper td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer; }
+        .table-wrapper tr:hover td { background: #f8fafc; }
+        .village-link { color: #0b1a33; font-weight: 600; text-decoration: none; border-bottom: 2px solid #d4a843; transition: 0.15s; cursor: pointer; }
+        .village-link:hover { color: #d4a843; border-bottom-color: #0b1a33; }
+        .no-results { text-align: center; padding: 30px; color: #64748b; font-style: italic; }
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; max-height: 200px; overflow-y: auto; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #f8fafc; margin-bottom: 16px; }
+        .checkbox-grid label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1e293b; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: 0.1s; }
+        .checkbox-grid label:hover { background: #e2e8f0; }
+        .checkbox-grid .all-tables { grid-column: 1 / -1; font-weight: 700; padding: 6px 0 10px 0; border-bottom: 2px solid #cbd5e1; margin-bottom: 6px; color: #0b1a33; }
+        .checkbox-grid input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0b1a33; cursor: pointer; flex-shrink: 0; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 8px 20px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #0b1a33; color: white; box-shadow: 0 4px 12px rgba(11,26,51,0.2); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(11,26,51,0.3); }
+        .btn-secondary { background: #e2e8f0; color: #1e293b; border: 1px solid #cbd5e1; }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn-success { background: #0b1a33; color: #d4a843; box-shadow: 0 4px 12px rgba(11,26,51,0.2); width: 100%; justify-content: center; padding: 12px; font-size: 15px; font-weight: 700; }
+        .btn-success:hover { background: #1a3a5c; color: #ffd966; }
+        .btn-sm { padding: 5px 14px; font-size: 12px; border-radius: 8px; }
+        .query-output { background: #0b1a33; border-radius: 12px; padding: 16px; color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border-left: 4px solid #d4a843; margin-top: 12px; line-height: 1.8; }
+        .query-output .empty { color: #94a3b8; font-style: italic; }
+        .code-stats { font-size: 13px; font-weight: 600; color: #0b1a33; background: #f1f5f9; padding: 4px 16px; border-radius: 20px; border: 1px solid #cbd5e1; white-space: nowrap; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+        .form-group textarea, .form-group input, .form-group select { width: 100%; padding: 8px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f8fafc; font-family: inherit; transition: 0.2s; outline: none; color: #1e293b; }
+        .form-group textarea:focus, .form-group input:focus, .form-group select:focus { border-color: #0b1a33; box-shadow: 0 0 0 3px rgba(11,26,51,0.1); }
+        .form-group textarea { min-height: 60px; resize: vertical; }
+        .form-group .code-input { font-family: 'Consolas', 'Courier New', monospace; background: #0b1a33; color: #e2e8f0; border-color: #1e3a5a; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+        .radio-group { display: flex; flex-wrap: wrap; gap: 6px 18px; background: #f1f5f9; padding: 8px 16px; border-radius: 30px; border: 1px solid #cbd5e1; margin-bottom: 12px; }
+        .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1e293b; cursor: pointer; }
+        .radio-group input[type="radio"] { accent-color: #0b1a33; width: 15px; height: 15px; cursor: pointer; }
+        .footer { margin-top: 30px; text-align: center; padding: 16px; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0; }
+        .footer a { color: #0b1a33; text-decoration: none; font-weight: 600; }
+        .footer a:hover { text-decoration: underline; color: #d4a843; }
         @media (max-width: 768px) {
             .header-grid { flex-direction: column; align-items: flex-start; }
             .header-right { text-align: left; width: 100%; }
@@ -701,7 +304,7 @@ HTML_TEMPLATE = """
 
 <div class="container">
 
-    <!-- ===== HEADER WITH LOGO ===== -->
+    <!-- ===== HEADER ===== -->
     <header class="header">
         <div class="header-grid">
             <div class="header-left">
@@ -719,10 +322,10 @@ HTML_TEMPLATE = """
         </div>
     </header>
 
-    <!-- ===== DASHBOARD GRID ===== -->
+    <!-- ===== DASHBOARD ===== -->
     <div class="dashboard-grid">
 
-        <!-- LEFT COLUMN: Village Explorer + Query Generator -->
+        <!-- LEFT COLUMN -->
         <div>
 
             <!-- STEP 1: Village Explorer -->
@@ -731,7 +334,6 @@ HTML_TEMPLATE = """
                     <span class="step-badge">1</span>
                     <i class="fas fa-map-marked-alt"></i> Village Explorer &amp; Code Lookup
                 </div>
-
                 <div class="filter-grid">
                     <div class="filter-group">
                         <label><i class="fas fa-globe"></i> District</label>
@@ -750,17 +352,13 @@ HTML_TEMPLATE = """
                         <select id="villageSelect"><option value="">All</option></select>
                     </div>
                 </div>
-
                 <div class="filter-group">
                     <label><i class="fas fa-search"></i> Quick Search Village Name</label>
                     <input type="text" id="villageSearch" placeholder="Type to filter villages...">
                 </div>
-
                 <div class="table-wrapper">
                     <table>
-                        <thead>
-                            <tr><th>District</th><th>Taluk</th><th>Hobli</th><th>Village Name</th></tr>
-                        </thead>
+                        <thead><tr><th>District</th><th>Taluk</th><th>Hobli</th><th>Village Name</th></tr></thead>
                         <tbody id="tableBody"><tr><td colspan="4" class="no-results">Loading directory…</td></tr></tbody>
                     </table>
                 </div>
@@ -777,21 +375,25 @@ HTML_TEMPLATE = """
                 </div>
 
                 <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-                    <div class="filter-group" style="flex:1 1 160px;">
+                    <div class="filter-group" style="flex:1 1 140px;">
                         <label><i class="fas fa-file-alt"></i> Appl No</label>
                         <input type="text" id="applNoInput" placeholder="e.g. 123/2024">
                     </div>
-                    <div class="filter-group" style="flex:1 1 160px;">
+                    <div class="filter-group" style="flex:1 1 140px;">
                         <label><i class="fas fa-exchange-alt"></i> Tran No</label>
                         <input type="text" id="tranNoInput" placeholder="e.g. 45/2024">
                     </div>
-                    <div class="filter-group" style="flex:1 1 160px;">
+                    <div class="filter-group" style="flex:1 1 140px;">
                         <label><i class="fas fa-map-pin"></i> Land Code</label>
                         <input type="text" id="landCodeInput" placeholder="e.g. LAND123">
                     </div>
-                    <div class="filter-group" style="flex:1 1 160px;">
-                        <label><i class="fas fa-calendar-alt"></i> Year Code</label>
+                    <div class="filter-group" style="flex:1 1 140px;">
+                        <label><i class="fas fa-calendar-alt"></i> Year</label>
                         <input type="text" id="yearCodeInput" placeholder="e.g. 2024">
+                    </div>
+                    <div class="filter-group" style="flex:1 1 140px;">
+                        <label><i class="fas fa-hashtag"></i> Survey No</label>
+                        <input type="text" id="surveyNoInput" placeholder="e.g. 123/1">
                     </div>
                 </div>
 
@@ -871,16 +473,21 @@ HTML_TEMPLATE = """
 
                     <div class="form-row">
                         <div class="form-group">
+                            <label><i class="fas fa-hashtag"></i> Survey No</label>
+                            <input type="text" name="survey_no" id="reportSurveyNo" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
                             <label><i class="fas fa-cloud-sun"></i> Season</label>
                             <input type="text" name="season" id="reportSeason" placeholder="Optional">
                         </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-tags"></i> Issue Type</label>
-                            <select name="issue_type" required>
-                                <option value="Technical">Technical</option>
-                                <option value="Administrative">Administrative</option>
-                            </select>
-                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-tags"></i> Issue Type</label>
+                        <select name="issue_type" required>
+                            <option value="Technical">Technical</option>
+                            <option value="Administrative">Administrative</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -1601,7 +1208,7 @@ HTML_TEMPLATE = """
         ["BIDAR (5)","HULASURA (8)","HULASURA (6)","KOTAMALA (18)"]
     ];
 
-    // Taluk mapping (as per original)
+    // Taluk mapping
     const talukMap = {
         "BASAVAKALYAN (1)":"BASAVAKALYAN (3)",
         "BHALKI (2)":"BHALKI (2)",
@@ -1644,7 +1251,7 @@ HTML_TEMPLATE = """
     ];
 
     // ================================================================
-    //  JAVASCRIPT LOGIC (unchanged from original, fully functional)
+    //  JAVASCRIPT LOGIC (with Survey No)
     // ================================================================
     let currentChecked = new Set();
 
@@ -1720,6 +1327,7 @@ HTML_TEMPLATE = """
     const tranNoInput = document.getElementById('tranNoInput');
     const landCodeInput = document.getElementById('landCodeInput');
     const yearCodeInput = document.getElementById('yearCodeInput');
+    const surveyNoInput = document.getElementById('surveyNoInput');
 
     // ---- Populate dropdowns ----
     function populateDistricts() {
@@ -1803,7 +1411,6 @@ HTML_TEMPLATE = """
         });
         tbody.innerHTML = html;
 
-        // Click handler for village links
         document.querySelectorAll('.village-link').forEach(el => {
             el.addEventListener('click', function(e) {
                 const dist = this.dataset.dist;
@@ -1856,7 +1463,7 @@ HTML_TEMPLATE = """
         return { dc, tc, hc, vc };
     }
 
-    // ---- Generate Queries ----
+    // ---- Generate Queries (with Survey No) ----
     function generateQueries() {
         const d = districtSel.value;
         const t = talukSel.value;
@@ -1866,6 +1473,7 @@ HTML_TEMPLATE = """
         const tran = tranNoInput.value.trim();
         const land = landCodeInput.value.trim();
         const year = yearCodeInput.value.trim();
+        const survey = surveyNoInput.value.trim();
 
         const dc = extractCode(d);
         const tc = extractCode(t);
@@ -1887,6 +1495,7 @@ HTML_TEMPLATE = """
         if (tran) conds.push(`tran_no = '${tran}'`);
         if (land) conds.push(`land_code = '${land}'`);
         if (year) conds.push(`year_code = '${year}'`);
+        if (survey) conds.push(`survey_no = '${survey}'`);
 
         if (conds.length === 0) {
             queryGrid.innerHTML = '⚠️ No filters selected. Please select at least one filter (location, app no, etc.)';
@@ -1908,6 +1517,7 @@ HTML_TEMPLATE = """
         if (!document.getElementById('reportTranNo').value) document.getElementById('reportTranNo').value = tran;
         if (!document.getElementById('reportYear').value) document.getElementById('reportYear').value = year;
         if (!document.getElementById('reportLandCode').value) document.getElementById('reportLandCode').value = land;
+        if (!document.getElementById('reportSurveyNo').value) document.getElementById('reportSurveyNo').value = survey;
     }
 
     // ---- Reset ----
@@ -1921,10 +1531,12 @@ HTML_TEMPLATE = """
         tranNoInput.value = '';
         landCodeInput.value = '';
         yearCodeInput.value = '';
+        surveyNoInput.value = '';
         document.getElementById('reportAppNo').value = '';
         document.getElementById('reportTranNo').value = '';
         document.getElementById('reportYear').value = '';
         document.getElementById('reportLandCode').value = '';
+        document.getElementById('reportSurveyNo').value = '';
         document.getElementById('reportSeason').value = '';
         document.getElementById('form_issue_desc').value = '';
         document.getElementById('form_select_block').value = '';
@@ -1979,6 +1591,7 @@ def generate():
         'year': request.form.get('year', ''),
         'land_code': request.form.get('land_code', ''),
         'season': request.form.get('season', ''),
+        'survey_no': request.form.get('survey_no', ''),
         'issue_type': request.form.get('issue_type', 'Technical'),
         'issue_desc': request.form.get('issue_desc', ''),
         'findings_desc': request.form.get('findings_desc', ''),
@@ -2002,6 +1615,7 @@ if __name__ == '__main__':
     print(f" 🚀 Server running on port {port}")
     print(" ✅ Logo will be served from /static/logo2.png")
     print(" ✅ Professional theme applied")
+    print(" ✅ Survey No field added")
     print(" ✅ Full village dataset included")
     print("--------------------------------------------------")
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
